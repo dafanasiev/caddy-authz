@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "kNa+SYt1Pr8Kf7Rx+Db0mlcaaP0=",
+			"path": "github.com/casbin/casbin",
+			"revision": "8349419948b14e721169d25e96a75c6603ed2c93",
+			"revisionTime": "2017-11-21T03:10:23Z"
+		}
+	],
+	"rootPath": "github.com/JonathanLogan/caddy-authz"
+}
