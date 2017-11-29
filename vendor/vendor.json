@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "EqRgMCCTxPN1rqOV2st7T5DJQ80=",
+			"checksumSHA1": "GDJGz7D3FGQMqQfS3+PnEx+AYRg=",
 			"path": "github.com/JonathanLogan/authfile",
-			"revision": "87694ad167c29a76143855e1bdac558160e4ac73",
-			"revisionTime": "2017-11-29T17:14:26Z"
+			"revision": "07298f62b865f75daa802e772e0ed8a1ac330367",
+			"revisionTime": "2017-11-29T18:55:15Z"
 		},
 		{
 			"checksumSHA1": "kNa+SYt1Pr8Kf7Rx+Db0mlcaaP0=",
