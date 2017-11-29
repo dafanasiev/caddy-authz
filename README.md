@@ -1,7 +1,7 @@
 Caddy-authz
 ======
 
-Caddy-authz is an authorization middleware for [Caddy](https://github.com/mholt/caddy), it's based on [https://github.com/casbin/casbin](https://github.com/casbin/casbin).
+Caddy-authz is an authorization middleware for [Caddy](https://github.com/mholt/caddy), it's based on [https://github.com/casbin/casbin](https://github.com/casbin/casbin). It includes basicauth checks agains a bcrypt password file.
 
 ## Installation
 
@@ -11,7 +11,7 @@ Caddy-authz is an authorization middleware for [Caddy](https://github.com/mholt/
 
 ```
 http://localhost:80 {
-    authz "/folder/to/caddy_binary/authz_model.conf" /folder/to/caddy_binary/authz_policy.csv"
+    authz "/folder/to/caddy_binary/authz_model.conf" /folder/to/caddy_binary/authz_policy.csv" AuthRealm authfile
     ...
 }
 ```
@@ -28,7 +28,7 @@ The ``authz`` directive specifies the path to Casbin model file (.conf) and Casb
 
 ```
 http://localhost:80 {
-    authz "authz_model.conf" "authz_policy.csv"
+    authz "authz_model.conf" "authz_policy.csv" MyRealm bcrypt.pass
     root "/my-website.net"
 }
 ```
