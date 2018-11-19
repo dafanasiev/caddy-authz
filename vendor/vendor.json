@@ -7,13 +7,7 @@
 			"path": "github.com/JonathanLogan/authfile",
 			"revision": "07298f62b865f75daa802e772e0ed8a1ac330367",
 			"revisionTime": "2017-11-29T18:55:15Z"
-		},
-		{
-			"checksumSHA1": "kNa+SYt1Pr8Kf7Rx+Db0mlcaaP0=",
-			"path": "github.com/casbin/casbin",
-			"revision": "8349419948b14e721169d25e96a75c6603ed2c93",
-			"revisionTime": "2017-11-21T03:10:23Z"
 		}
 	],
-	"rootPath": "github.com/JonathanLogan/caddy-authz"
+	"rootPath": "github.com/dafanasiev/caddy-authz"
 }
