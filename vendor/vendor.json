@@ -3,10 +3,8 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "GDJGz7D3FGQMqQfS3+PnEx+AYRg=",
-			"path": "github.com/JonathanLogan/authfile",
-			"revision": "07298f62b865f75daa802e772e0ed8a1ac330367",
-			"revisionTime": "2017-11-29T18:55:15Z"
+			"path": "github.com/dafanasiev/authfile",
+			"revision": "990d7992aa838237ac202a98715800e968cc1b2e",
 		}
 	],
 	"rootPath": "github.com/dafanasiev/caddy-authz"

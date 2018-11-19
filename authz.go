@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JonathanLogan/authfile"
 	"github.com/casbin/casbin"
+	"github.com/dafanasiev/authfile"
 	"github.com/mholt/caddy"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 )
@@ -61,7 +61,7 @@ func Setup(c *caddy.Controller) error {
 		return err
 	}
 
-	filebackend, err := authfile.NewFileBackend(passwordFile, 0600, time.Second*5)
+	filebackend, err := authfile.NewROFileBackend(passwordFile, 0600, time.Second*5)
 	if err != nil {
 		return err
 	}
