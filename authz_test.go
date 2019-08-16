@@ -2,7 +2,7 @@ package authz
 
 import (
 	"github.com/casbin/casbin"
-	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"github.com/caddyserver/caddy/caddyhttp/httpserver"
 	"net/http"
 	"net/http/httptest"
 	"testing"
