@@ -1,4 +1,4 @@
-module github.com/dafanasiev/caddy-authz
+module github.com/dafanasiev/caddy-authz/v2
 
 go 1.12
 
