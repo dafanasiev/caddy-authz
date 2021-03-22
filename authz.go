@@ -1,119 +1,125 @@
 package authz
 
 import (
+	"fmt"
+	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"net/http"
 	"time"
 
 	"github.com/casbin/casbin"
 	"github.com/dafanasiev/authfile"
-	"github.com/caddyserver/caddy"
-	"github.com/caddyserver/caddy/caddyhttp/httpserver"
 )
 
-// Authorizer is a middleware for filtering clients based on their ip or country's ISO code.
+func init() {
+	caddy.RegisterModule(Authorizer{})
+	httpcaddyfile.RegisterHandlerDirective("authz", parseCaddyfile)
+}
+
 type Authorizer struct {
-	Next          httpserver.Handler
+	AuthConfig struct {
+		ModelPath  string
+		PolicyPath string
+		Realm         string
+		PasswordFile string
+	}
+
 	Enforcer      *casbin.Enforcer
-	Realm         string
 	PasswordCheck authfile.IAuthenticationService
 }
 
-// Init initializes the plugin
-func init() {
-	caddy.RegisterPlugin("authz", caddy.Plugin{
-		ServerType: "http",
-		Action:     Setup,
-	})
+// CaddyModule returns the Caddy module information.
+func (Authorizer) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "http.handlers.authz",
+		New: func() caddy.Module { return new(Authorizer) },
+	}
 }
 
-// GetConfig gets the config path that corresponds to c.
-func GetConfig(c *caddy.Controller) (string, string, string, string, error) {
-	var modelPath, policyPath, realm, passwordFile string
-	if c.Next() { // skip the directive name
-		if !c.NextArg() { // expect at least one value
-			return "", "", "", "", c.ArgErr() // otherwise it's an error
-		}
-		modelPath = c.Val() // use the value
-
-		if !c.NextArg() { // expect at least one value
-			return "", "", "", "", c.ArgErr() // otherwise it's an error
-		}
-		policyPath = c.Val() // use the value
-		if !c.NextArg() {    // expect at least one value
-			return "", "", "", "", c.ArgErr() // otherwise it's an error
-		}
-		realm = c.Val()   // use the value
-		if !c.NextArg() { // expect at least one value
-			return "", "", "", "", c.ArgErr() // otherwise it's an error
-		}
-		passwordFile = c.Val() // use the value
-	} else {
-		return "", "", "", "", c.ArgErr() // otherwise it's an error
-	}
-	return modelPath, policyPath, realm, passwordFile, nil
-}
-
-// Setup parses the Casbin configuration and returns the middleware handler.
-func Setup(c *caddy.Controller) error {
-	modelPath, policyPath, realm, passwordFile, err := GetConfig(c)
-
-	if err != nil {
-		return err
-	}
-
-	filebackend, err := authfile.NewROFileBackend(passwordFile, 0600, time.Second*5)
+// Provision implements caddy.Provisioner.
+func (a *Authorizer) Provision(ctx caddy.Context) error {
+	filebackend, err := authfile.NewROFileBackend(a.AuthConfig.PasswordFile, 0600, time.Second*5)
 	if err != nil {
 		return err
 	}
 	authProvider := authfile.NewInMemoryService(filebackend, time.Second)
 	authProvider.Update()
 
-	e, err := casbin.NewEnforcerSafe(modelPath, policyPath)
+	e, err := casbin.NewEnforcerSafe(a.AuthConfig.ModelPath, a.AuthConfig.PolicyPath)
 	if err != nil {
 		return err
 	}
-
-	// Create new middleware
-	newMiddleWare := func(next httpserver.Handler) httpserver.Handler {
-		return &Authorizer{
-			Next:          next,
-			Enforcer:      e,
-			Realm:         realm,
-			PasswordCheck: authProvider,
-		}
-	}
-	// Add middleware
-	cfg := httpserver.GetConfig(c)
-	cfg.AddMiddleware(newMiddleWare)
+	a.Enforcer = e
 
 	return nil
 }
 
-// ServeHTTP serves the request.
-func (a Authorizer) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+// Validate implements caddy.Validator.
+func (a *Authorizer) Validate() error {
+	if a.Enforcer == nil {
+		return fmt.Errorf("no Enforcer")
+	}
+	return nil
+}
+
+// ServeHTTP implements caddyhttp.MiddlewareHandler.
+func (a Authorizer) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	switch a.CheckPermission(r) {
 	case AccessDenied:
 		w.WriteHeader(403)
-		return http.StatusForbidden, nil
+		return nil
 	case AccessAllowed:
-		return a.Next.ServeHTTP(w, r)
+		return next.ServeHTTP(w, r)
 	default:
-		w.Header().Set("WWW-Authenticate", "Basic realm=\""+a.Realm+"\"") // ToDo set realm
-		return http.StatusUnauthorized, nil
+		w.Header().Set("WWW-Authenticate", "Basic realm=\""+a.AuthConfig.Realm+"\"")
+		return nil
 	}
-	return http.StatusUnauthorized, nil
 }
 
-// GetUserName gets the user name from the request.
+// UnmarshalCaddyfile implements caddyfile.Unmarshaler.
+func (a *Authorizer) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	for d.Next() {
+		if !d.NextArg() {
+			return d.ArgErr()
+		}
+		a.AuthConfig.ModelPath = d.Val()
+		if !d.NextArg() {
+			return d.ArgErr()
+		}
+		a.AuthConfig.PolicyPath = d.Val()
+
+		if !d.NextArg() {
+			return d.ArgErr()
+		}
+		a.AuthConfig.Realm = d.Val()
+
+		if !d.NextArg() {
+			return d.ArgErr()
+		}
+		a.AuthConfig.PasswordFile = d.Val()
+	}
+	return nil
+}
+
+// parseCaddyfile unmarshals tokens from h into a new Authorizer.
+func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	var m Authorizer
+	err := m.UnmarshalCaddyfile(h.Dispenser)
+	return m, err
+}
+
+// getUserName gets the user name from the request.
 // Currently, only HTTP basic authentication is supported
-func (a *Authorizer) GetUserName(r *http.Request) string {
+func (a *Authorizer) getUserName(r *http.Request) string {
 	username, _, _ := r.BasicAuth()
 	return username
 }
 
-// CheckEnforce verifies if the user has access to the resource. If no
+// checkEnforce verifies if the user has access to the resource. If no
 // username is given, the check will be against "nobody" only.
-func (a *Authorizer) CheckEnforce(user, path, method string) (int, bool) {
+func (a *Authorizer) checkEnforce(user, path, method string) (int, bool) {
 	if user != "" {
 		if a.Enforcer.Enforce(user, path, method) {
 			return IdentifiedAccess, true
@@ -157,7 +163,7 @@ func (a *Authorizer) CheckPermission(r *http.Request) int {
 	method := r.Method
 	path := r.URL.Path
 
-	authorizeLevel, authorized := a.CheckEnforce(user, path, method)
+	authorizeLevel, authorized := a.checkEnforce(user, path, method)
 	if authorized {
 		switch authorizeLevel {
 		case AnonymousAccess:
