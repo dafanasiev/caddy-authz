@@ -1,18 +1,22 @@
 package authz
 
 import (
+	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 	"github.com/casbin/casbin"
-	"github.com/caddyserver/caddy/caddyhttp/httpserver"
+	"github.com/dafanasiev/authfile"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func testRequest(t *testing.T, handler Authorizer, user string, path string, method string, code int) {
 	r, _ := http.NewRequest(method, path, nil)
 	r.SetBasicAuth(user, "123")
 	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, r)
+	handler.ServeHTTP(w, r, caddyhttp.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) error {
+		return nil
+	}))
 
 	if w.Code != code {
 		t.Errorf("%s, %s, %s: %d, supposed to be %d", user, path, method, w.Code, code)
@@ -22,11 +26,18 @@ func testRequest(t *testing.T, handler Authorizer, user string, path string, met
 func TestBasic(t *testing.T) {
 	e := casbin.NewEnforcer("authz_model.conf", "authz_policy.csv")
 
+	filebackend, err := authfile.NewROFileBackend("bcrypt.pass", 0600, time.Second*5)
+	if err != nil {
+		t.Fail()
+		return
+	}
+	authProvider := authfile.NewInMemoryService(filebackend, time.Second)
+	authProvider.Update()
+
+
 	handler := Authorizer{
-		Next: httpserver.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			return http.StatusOK, nil
-		}),
 		Enforcer: e,
+		PasswordCheck: authProvider,
 	}
 
 	testRequest(t, handler, "alice", "/dataset1/resource1", "GET", 200)
@@ -38,11 +49,17 @@ func TestBasic(t *testing.T) {
 func TestPathWildcard(t *testing.T) {
 	e := casbin.NewEnforcer("authz_model.conf", "authz_policy.csv")
 
+	filebackend, err := authfile.NewROFileBackend("bcrypt.pass", 0600, time.Second*5)
+	if err != nil {
+		t.Fail()
+		return
+	}
+	authProvider := authfile.NewInMemoryService(filebackend, time.Second)
+	authProvider.Update()
+
 	handler := Authorizer{
-		Next: httpserver.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			return http.StatusOK, nil
-		}),
 		Enforcer: e,
+		PasswordCheck: authProvider,
 	}
 
 	testRequest(t, handler, "bob", "/dataset2/resource1", "GET", 200)
@@ -63,11 +80,17 @@ func TestPathWildcard(t *testing.T) {
 func TestRBAC(t *testing.T) {
 	e := casbin.NewEnforcer("authz_model.conf", "authz_policy.csv")
 
+	filebackend, err := authfile.NewROFileBackend("bcrypt.pass", 0600, time.Second*5)
+	if err != nil {
+		t.Fail()
+		return
+	}
+	authProvider := authfile.NewInMemoryService(filebackend, time.Second)
+	authProvider.Update()
+
 	handler := Authorizer{
-		Next: httpserver.HandlerFunc(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			return http.StatusOK, nil
-		}),
 		Enforcer: e,
+		PasswordCheck: authProvider,
 	}
 
 	// cathy can access all /dataset1/* resources via all methods because it has the dataset1_admin role.
@@ -79,7 +102,7 @@ func TestRBAC(t *testing.T) {
 	testRequest(t, handler, "cathy", "/dataset2/item", "DELETE", 403)
 
 	// delete all roles on user cathy, so cathy cannot access any resources now.
-	e.DeleteRolesForUser("cathy")
+	e.DeletePermissionsForUser("cathy")
 
 	testRequest(t, handler, "cathy", "/dataset1/item", "GET", 403)
 	testRequest(t, handler, "cathy", "/dataset1/item", "POST", 403)

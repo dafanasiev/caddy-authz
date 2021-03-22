@@ -51,6 +51,8 @@ func (a *Authorizer) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
+
+	a.PasswordCheck = authProvider
 	a.Enforcer = e
 
 	return nil

@@ -1,7 +1,14 @@
-p, nobody, *, POST, deny
-p, nobody, *, PUT, deny
-p, test, /private/*, GET, allow
-p, test, /private2/*, GET, allow
-p, test2, /private2/*, GET, allow
-p, nobody, *, GET, allow
-p, nobody, /priv*, *, deny
+p, nobody, /, *, deny
+
+
+p, alice, /dataset1/resource1, GET, allow
+p, alice, /dataset1/resource1, POST, allow
+p, alice, /dataset1/resource2, GET, allow
+
+p, bob, ^/dataset2/resource1, GET, allow
+p, bob, ^/dataset2/resource1, POST, allow
+p, bob, ^/dataset2/resource1, DELETE, allow
+p, bob, ^/dataset2/resource2, GET, allow
+p, bob, ^/dataset2/folder1, POST, allow
+
+p, cathy, ^/dataset1/, *, allow
