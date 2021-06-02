@@ -75,8 +75,8 @@ func (a Authorizer) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddy
 	case AccessAllowed:
 		return next.ServeHTTP(w, r)
 	default:
-		w.WriteHeader(401)
 		w.Header().Set("WWW-Authenticate", "Basic realm=\""+a.AuthConfig.Realm+"\"")
+		w.WriteHeader(401)
 		return nil
 	}
 }
